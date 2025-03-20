@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jwt-decode/3.1.2/jwt-decode.min.js"></script>
+    <script>
+        emailjs.init("k9ZTNllr8X44zgV7w");
+
+        let verificationCode = "";
+
+        // دالة لإرسال كود التحقق
+        function sendVerificationCode() {
+            const email = document.getElementById("email").value;
+            const storedUser = localStorage.getItem(email);
+
+            if (!validateEmail(email)) {
+                showError("email", "البريد الإلكتروني غير صحيح.");
+                return;
+            }
+
+            if (!storedUser) {
+                showError("email", "هذا الحساب غير مسجل.");
+                return;
+            }
+
+            verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+            alert("تم إرسال كود التحقق إلى بريدك الإلكتروني.");
+
+            emailjs.send("service_mfplq8p", "template_verification_code", {
+                to_email: email,
+                verification_code: verificationCode
+            }).then(() => {
+                alert("تم إرسال كود التحقق بنجاح!");
+            }, (error) => {
+                console.error("فشل في إرسال كود التحقق:", error);
+            });
+        }
+
+        // دالة للتعامل مع تسجيل الدخول عبر Google
+        function handleCredentialResponse(response) {
+            const data = jwt_decode(response.credential);
+            console.log("تسجيل الدخول عبر Google:", data);
+            localStorage.setItem("user", JSON.stringify({
+                email: data.email,
+                name: data.name,
+                picture: data.picture
+            }));
+            alert("تم تسجيل الدخول بنجاح باستخدام Google!");
+            window.location.href = "welcome.html";
+        }
+
+        // دالة للتحقق من صحة البريد الإلكتروني
+        function validateEmail(email) {
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return regex.test(email);
+        }
+
+        // دالة للتحقق من صحة تسجيل الدخول
+        function validateLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const enteredCode = document.getElementById("verificationCode").value;
+            const storedUser = localStorage.getItem(email);
+
+            if (!storedUser) {
+                showError("email", "هذا الحساب غير مسجل.");
+                return;
+            }
+
+            const userData = JSON.parse(storedUser);
+            const hashedPassword = CryptoJS.SHA256(password).toString();
+
+            if (userData.password !== hashedPassword) {
+                showError("password", "كلمة المرور غير صحيحة!");
+                return;
+            }
+
+            if (enteredCode !== verificationCode) {
+                showError("verificationCode", "كود التحقق غير صحيح!");
+                return;
+            }
+
+            hideErrors();
+            alert("تم تسجيل الدخول بنجاح!");
+            window.location.href = "welcome.html";
+        }
+
+        // دالة لعرض رسائل الخطأ
+        function showError(inputId, message) {
+            const inputField = document.getElementById(inputId);
+            const parent = inputField.parentElement;
+            let errorElement = parent.querySelector('.error-message');
+            if (!errorElement) {
+                errorElement = document.createElement('p');
+                errorElement.classList.add('text-red-600', 'text-xs', 'error-message');
+                parent.appendChild(errorElement);
+            }
+            errorElement.textContent = message;
+        }
+
+        // دالة لإخفاء رسائل الخطأ
+        function hideErrors() {
+            const errorMessages = document.querySelectorAll('.error-message');
+            errorMessages.forEach(errorMessage => errorMessage.textContent = '');
+        }
+    </script>
+</head>
+<body class="bg-gray-100 text-right">
+
+    <nav class="bg-blue-600 text-white p-6 flex flex-col items-center shadow-md">
+        <div class="bg-white p-2 rounded-full shadow-lg">
+            <img src="https://cdn.discordapp.com/attachments/1324079122317574255/1337762738583375983/cebe0eddc1ac9bf1.png?ex=67ab4323&is=67a9f1a3&hm=6a031a4dd97080e6bdb2cdee1ef9d79f7c528273313b8cf11bb83578fbb98bf3&" 
+                alt="شعار الشركة" 
+                class="w-20 h-20 rounded-full">
+        </div>
+        <h1 class="text-2xl font-bold mt-3">العادل للتجارة العامة</h1>
+    </nav>
+
+    <section class="py-20 container mx-auto max-w-md">
+        <h2 class="text-4xl font-bold mb-6 text-center">تسجيل الدخول</h2>
+        
+        <form class="bg-white p-6 rounded-lg shadow-lg space-y-4" onsubmit="validateLogin(event)">
+            <input type="email" id="email" placeholder="البريد الإلكتروني" required class="w-full p-3 rounded border border-gray-300">
+            <input type="password" id="password" placeholder="كلمة المرور" required class="w-full p-3 rounded border border-gray-300">
+            <button type="button" onclick="sendVerificationCode()" class="bg-green-600 text-white p-2 rounded w-full">إرسال كود التحقق</button>
+            <input type="text" id="verificationCode" placeholder="أدخل كود التحقق" required class="w-full p-3 rounded border border-gray-300">
+            <button type="submit" class="bg-blue-600 text-white p-3 rounded w-full">تسجيل الدخول</button>
+        </form>
+
+        <div class="text-center mt-6">
+            <a href="signup.html" class="bg-green-600 text-white p-3 rounded w-full inline-block">إنشاء حساب</a>
+        </div>
+
+        <div class="text-center my-4 text-gray-600">أو</div>
+
+        <div class="flex justify-center items-center gap-4">
+            <div id="g_id_onload" data-client_id="38981588326-mdcjtmelqbo6gdo7unm3ffuk24knancr.apps.googleusercontent.com" data-callback="handleCredentialResponse" data-auto_prompt="false"></div>
+            <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="signin_with" data-shape="rectangular" data-logo_alignment="left"></div>
+            <span class="inline-block text-blue-600">
+                <a href="forgot-password.html">نسيت كلمة المرور؟</a>
+            </span>
+        </div>
+    </section>
+
+</body>
+</html>
